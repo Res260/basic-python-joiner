@@ -32,9 +32,11 @@ def inner_join(left_json_array, right_json_array, left_key, right_key):
     left_objects = __populate_objects_dictionary(left_json_array, left_key)
 
     for right_json_object in right_json_array:
-        if right_json_object[right_key] in left_objects:
+        try:
             __merge_and_join_objects(left_objects[right_json_object[right_key]], right_json_object,
                                      resulting_array)
+        except KeyError:
+            pass
 
     return resulting_array
 
@@ -58,11 +60,11 @@ def full_outer_join(left_json_array, right_json_array, left_key, right_key):
     left_objects = __populate_objects_dictionary(left_json_array, left_key)
 
     for right_json_object in right_json_array:
-        if right_json_object[right_key] in left_objects:
+        try:
             __merge_and_join_objects(left_objects[right_json_object[right_key]], right_json_object,
                                      resulting_array)
             already_joined_left_object_keys[right_json_object[right_key]] = True
-        else:
+        except KeyError:
             resulting_array.append(right_json_object)
 
     for key in already_joined_left_object_keys.keys():
@@ -129,9 +131,9 @@ def __populate_objects_dictionary(json_array, key):
     """
     objects_dictionary = {}
     for left_json_object in json_array:
-        if left_json_object[key] in objects_dictionary:
+        try:
             objects_dictionary[left_json_object[key]].append(left_json_object)
-        else:
+        except KeyError:
             objects_dictionary[left_json_object[key]] = [left_json_object]
     return objects_dictionary
 

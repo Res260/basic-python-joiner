@@ -13,7 +13,7 @@ def get_json_from_file(file_path):
         return json.load(data_file)
 
 
-def merge_objects(left_json_object, right_json_object):
+def __merge_objects(left_json_object, right_json_object):
     """
     Takes every key of both provided objects and create a new object with all the keys in it.
     NOTE: If right_json_object has one or more key that is the same as left_json_object, 
@@ -41,21 +41,20 @@ def inner_join(left_json_array, right_json_array, left_key, right_key):
     :param right_json_array: The array of the "right" objects.
     :param left_key: The key of the left objects to use to join the right objects with. 
     :param right_key: The key of the right objects to use to join the left objects with.
-    :return: An array containing the joined objects.
+    :return: An array containing the inner-joined objects.
     """
     resulting_array = []
-    left_objects = populate_objects_dictionary(left_json_array, left_key)
-    print("\n")
+    left_objects = __populate_objects_dictionary(left_json_array, left_key)
 
     for right_json_object in right_json_array:
         if right_json_object[right_key] in left_objects:
-            merge_and_join_objects(left_objects[right_json_object[right_key]], right_json_object,
-                                   resulting_array)
+            __merge_and_join_objects(left_objects[right_json_object[right_key]], right_json_object,
+                                     resulting_array)
 
     return resulting_array
 
 
-def merge_and_join_objects(left_objects_to_merge, right_json_object, merged_objects):
+def __merge_and_join_objects(left_objects_to_merge, right_json_object, merged_objects):
     """
     Foreach element in left_objects_to_merge, merge right_json_object to it and appends the result 
     in merged_objects.
@@ -67,10 +66,10 @@ def merge_and_join_objects(left_objects_to_merge, right_json_object, merged_obje
                            elements after the routine call.
     """
     for left_json_object in left_objects_to_merge:
-        merged_objects.append(merge_objects(left_json_object, right_json_object))
+        merged_objects.append(__merge_objects(left_json_object, right_json_object))
 
 
-def populate_objects_dictionary(json_array, key):
+def __populate_objects_dictionary(json_array, key):
     """
     Builds a dictionary of objects using json_array[i][key] as key and an array containing all the 
     elements with the same key as value. 
@@ -101,3 +100,54 @@ def populate_objects_dictionary(json_array, key):
         else:
             objects_dictionary[left_json_object[key]] = [left_json_object]
     return objects_dictionary
+
+
+def full_outer_join(left_json_array, right_json_array, left_key, right_key):
+    """
+        Perform an "outer join" with two json arrays with 
+        the condition "leftObject[leftKey] = rightObject[rightKey]". The resulting array contains the
+        union of both arrays. If the condition is met, merge both objects.
+        NOTE: If right_json_array's objects contain one or more key the 
+              same as left_json_array's objects, they will be ignored.
+              As like every time you use JSON, order is not necessarily kept.
+        :param left_json_array: The array of the "left" objects.
+        :param right_json_array: The array of the "right" objects.
+        :param left_key: The key of the left objects to use to join the right objects with. 
+        :param right_key: The key of the right objects to use to join the left objects with.
+        :return: An array containing the outer-joined objects.
+        """
+    resulting_array = []
+    already_joined_left_object_keys = {}
+    left_objects = __populate_objects_dictionary(left_json_array, left_key)
+
+    for right_json_object in right_json_array:
+        if right_json_object[right_key] in left_objects:
+            __merge_and_join_objects(left_objects[right_json_object[right_key]], right_json_object,
+                                     resulting_array)
+            already_joined_left_object_keys[right_json_object[right_key]] = True
+        else:
+            resulting_array.append(right_json_object)
+
+    for key in already_joined_left_object_keys.keys():
+        left_objects[key] = None
+
+    __add_unjoined_objects(left_objects, resulting_array)
+
+    return resulting_array
+
+
+def __add_unjoined_objects(unjoined_objects_dictionary, resulting_array):
+    """
+    For each element in unjoined_objects_dictionary, add it in resulting_array.
+    Ex: unjoined_objects_dictionary = {
+          1 => None,
+          2 => [{anObject}],
+          3 => [{anotherObject}, {aThirdObject}]
+        }
+        Then, {anObject}, {anotherObject} and {aThirdObject} will be appended to resulting_array.
+    :param unjoined_objects_dictionary: The dictionary containing the unjoined objects 
+    :param resulting_array: The array in which to add unjoined objects.
+    """
+    for left_object_array in unjoined_objects_dictionary.values():
+        if left_object_array:
+            resulting_array += left_object_array
